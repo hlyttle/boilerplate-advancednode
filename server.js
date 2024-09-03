@@ -5,6 +5,7 @@ const myDB = require("./connection");
 const fccTesting = require("./freeCodeCamp/fcctesting.js");
 const session = require("express-session");
 const passport = require("passport");
+const { ObjectID } = require("mongodb");
 
 const app = express();
 
@@ -27,8 +28,28 @@ app.set("views", "./views/pug");
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.route("/").get((req, res) => {
-  res.render("index", { title: "Hello", message: "Please log in" });
+myDB(async (client) => {
+  const myDataBase = await client.db("database").collection("users");
+
+  app.route("/").get((req, res) => {
+    res.render("index", {
+      title: "Connected to Database",
+      message: "Please log in",
+    });
+  });
+
+  passport.serializeUser((user, done) => {
+    done(null, user._id);
+  });
+  passport.deserializeUser((id, done) => {
+    myDataBase.findOne({ _id: new ObjectID(id) }, (err, doc) => {
+      done(null, doc);
+    });
+  });
+}).catch((e) => {
+  app.route("/").get((req, res) => {
+    res.render("index", { title: e, message: "Unable to connect to database" });
+  });
 });
 
 const PORT = process.env.PORT;
