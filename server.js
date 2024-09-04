@@ -60,13 +60,26 @@ myDB(async (client) => {
   let currentUsers = 0;
   io.on("connection", (socket) => {
     ++currentUsers;
-    io.emit("user count", currentUsers);
+    io.emit("user", {
+      username: socket.request.user.username,
+      currentUsers,
+      connected: true,
+    });
+    socket.on("chat message", (message) => {
+      io.emit("chat message", {
+        username: socket.request.user.username,
+        message,
+      });
+    });
     console.log("A user has connected");
-
     socket.on("disconnect", () => {
       console.log("A user has disconnected");
       --currentUsers;
-      io.emit("user count", currentUsers);
+      io.emit("user", {
+        username: socket.request.user.username,
+        currentUsers,
+        connected: false,
+      });
     });
   });
 }).catch((e) => {
@@ -87,7 +100,7 @@ function onAuthorizeFail(data, message, error, accept) {
   accept(null, false);
 }
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 http.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`);
 });
